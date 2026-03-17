@@ -6,7 +6,6 @@ __pycache__/
 # PyInstaller build output
 build/
 dist/
-*.spec
 
 # Database (contains real data — don't commit)
 *.db

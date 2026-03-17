@@ -14,9 +14,11 @@ from pathlib import Path
 
 # Resolve the app's root directory whether running as .py or compiled .exe
 if getattr(sys, "frozen", False):
-    APP_DIR = Path(sys.executable).parent
+    APP_DIR = Path(sys.executable).parent          # writable dir next to .exe
+    BUNDLE_DIR = Path(sys._MEIPASS)                # bundled read-only assets
 else:
     APP_DIR = Path(__file__).parent
+    BUNDLE_DIR = APP_DIR
 
 from database import DatabaseManager
 from models.document import Document
@@ -150,31 +152,39 @@ def make_card(radius: int = 12) -> QFrame:
 class StatCard(QFrame):
     def __init__(self, title: str, value: str, accent: str, parent=None):
         super().__init__(parent)
-        self.setStyleSheet(f"""
-            QFrame {{
-                background: white;
-                border-radius: 12px;
-                border-left: 5px solid {accent};
-            }}
-        """)
+        self.setStyleSheet(f"QFrame {{ background: white; border-radius: 12px; }}")
         self.setMinimumHeight(100)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 16, 20, 14)
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(0)
+
+        # Colored left accent strip
+        strip = QFrame()
+        strip.setFixedWidth(5)
+        strip.setStyleSheet(f"background: {accent}; border-top-left-radius: 12px; border-bottom-left-radius: 12px;")
+        row.addWidget(strip)
+
+        # Content
+        content = QWidget()
+        content.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(18, 16, 20, 14)
         layout.setSpacing(4)
 
         self._value_lbl = QLabel(value)
         self._value_lbl.setStyleSheet(
-            f"font-size: 34px; font-weight: bold; color: {accent}; background: transparent;"
+            f"font-size: 34px; font-weight: bold; color: {accent};"
         )
         title_lbl = QLabel(title.upper())
         title_lbl.setStyleSheet(
-            "font-size: 11px; font-weight: bold; color: #94a3b8; letter-spacing: 1px; background: transparent;"
+            "font-size: 11px; font-weight: bold; color: #94a3b8; letter-spacing: 1px;"
         )
 
         layout.addWidget(self._value_lbl)
         layout.addWidget(title_lbl)
+        row.addWidget(content)
 
     def update_value(self, value: str):
         self._value_lbl.setText(value)
@@ -416,7 +426,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1060, 680)
         self.setGeometry(120, 80, 1320, 820)
 
-        icon_path = APP_DIR / "assets" / "icon.jpg"
+        icon_path = BUNDLE_DIR / "assets" / "icon.jpg"
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
 
@@ -451,30 +461,8 @@ class MainWindow(QMainWindow):
         sidebar.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
 
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(16, 28, 16, 20)
+        layout.setContentsMargins(16, 75, 16, 20)
         layout.setSpacing(0)
-
-        # Logo image
-        logo_path = APP_DIR / "assets" / "logo.png"
-        if logo_path.exists():
-            logo_lbl = QLabel()
-            pixmap = QPixmap(str(logo_path))
-            logo_lbl.setPixmap(
-                pixmap.scaledToWidth(190, Qt.TransformationMode.SmoothTransformation)
-            )
-            logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            logo_lbl.setStyleSheet("background: transparent; padding: 4px 0px 8px 0px;")
-            layout.addWidget(logo_lbl)
-        else:
-            # Fallback text if image not found
-            app_name = QLabel("REGISTRU")
-            app_name.setObjectName("appTitle")
-            layout.addWidget(app_name)
-            sub = QLabel("Intrări · Ieșiri")
-            sub.setObjectName("appSubtitle")
-            layout.addWidget(sub)
-
-        layout.addSpacing(14)
 
         divider = QFrame()
         divider.setObjectName("sidebarDivider")
@@ -507,6 +495,20 @@ class MainWindow(QMainWindow):
             self._nav_buttons.append(btn)
 
         self._nav_buttons[0].setChecked(True)
+
+        layout.addSpacing(14)
+
+        # Logo image below nav buttons
+        logo_path = BUNDLE_DIR / "assets" / "logo.png"
+        if logo_path.exists():
+            logo_lbl = QLabel()
+            pixmap = QPixmap(str(logo_path))
+            logo_lbl.setPixmap(
+                pixmap.scaledToWidth(190, Qt.TransformationMode.SmoothTransformation)
+            )
+            logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            logo_lbl.setStyleSheet("background: transparent; padding: 4px 0px 8px 0px;")
+            layout.addWidget(logo_lbl)
 
         layout.addStretch()
 
